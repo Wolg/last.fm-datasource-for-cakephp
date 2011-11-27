@@ -17,11 +17,7 @@
  * @package cake-bits
  * @subpackage datasource
  */
-App::import(array(
-	'HttpSocket', 
-	'Xml', 
-	'Set'
-));
+App::uses('HttpSocket', 'Network/Http');
 
 /**
  * LastFM Datasource
@@ -420,11 +416,11 @@ abstract class LastFmApi extends Object {
 		$this->response = $this->{$this->method}($this->methodParams);
 		
 		if (!empty($this->response)) {
-			$resp = Set::reverse(new Xml($this->response));
+			$resp = Set::reverse(Xml::build($this->response));
 			
 			if (is_array($resp)) {
-				$resp = $resp['Lfm'];
-				if ($resp['status'] == 'failed') {
+				$resp = $resp['lfm'];
+				if ($resp['@status'] == 'failed') {
 					throw new LastfmSourceApiException($this->restMethod, $resp['error']['value'], $resp['error']['code']);
 				}
 			}
@@ -484,12 +480,12 @@ abstract class LastFmApi extends Object {
 		elseif ($isPostMethod) {
 			$this->queryType = 'post';
 			$this->requiresAuth = $requiresAuth;
-			$method = low($this->entity) . '.' . $name;
+			$method = strtolower($this->entity) . '.' . $name;
 		}
 		elseif ($isGetMethod) {
 			$this->queryType = 'get';
 			$this->requiresAuth = $requiresAuth;
-			$method = low($this->entity) . '.' . $name;
+			$method = strtolower($this->entity) . '.' . $name;
 		}
 		
 		$this->restMethod = $method;
@@ -570,14 +566,14 @@ abstract class LastFmApi extends Object {
 			'path' => $this->source->config['apiPath'], 
 			'query' => $methodParams
 		);
-		$uri = $sock->buildUri($uriConfig, '%scheme://%host/%path?%query');
-		
+		$uri = $sock->url($uriConfig, '%scheme://%host/%path?%query');
+
 		$this->lastUri = $uri;
 		$this->lastData = $methodParams;
 		
 		// Query the service
 		if ($this->queryType == 'get') {
-			return $sock->get($uri);
+			return $sock->get($uri)->body;
 		}
 		elseif ($this->queryType = 'post') {
 			$this->lastData = $methodData;
